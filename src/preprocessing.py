@@ -40,7 +40,7 @@ wildfires_2015 = gpd.read_file(extract_dir)
 
 wildfires_2015.columns
 
-wildfires_2015.loc[:, "geometry"]
+wildfires_2015.loc[:, "AFSDATE"].isnull().sum()
 
 
 
@@ -49,9 +49,7 @@ wildfires_2015 = wildfires_2015.to_crs("EPSG:4326")
 
 wildfires_2015.plot(edgecolor = "0.2", color = 'red', figsize=(10, 8))
 
-# +
-## shutil.rmtree(extract_dir)
-# -
+shutil.rmtree(extract_dir)
 
 wildfires_2015[wildfires_2015['NFIREID']==1494]['geometry'].centroid.x
 
@@ -459,5 +457,7 @@ extract_metrics('temperature', column_names)
 extract_metrics('wind_speed', column_names)
 
 extract_metrics('precipitation', column_names)
+
+# ### SQL commands 
 
 
