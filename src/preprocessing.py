@@ -21,7 +21,7 @@ import shutil
 
 # ### Wildfires geopandas dataframe
 
-filename = 'nbac_1986_r9_20210810'
+filename = 'nbac_2015_r9_20210810'
 
 zip_file_path = f'../data/raw/annual_wildfires/{filename}.zip'
 extract_dir = f'../data/raw/annual_wildfires/{filename}'
@@ -35,29 +35,41 @@ with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
 # +
 # geopandas dataframe of the wildfires
 
-wildfires_1986 = gpd.read_file(extract_dir)
+wildfires_2015 = gpd.read_file(extract_dir)
 # -
 
-wildfires_1986.columns
+wildfires_2015.columns
 
-wildfires_1986.loc[:, "geometry"]
+wildfires_2015.loc[:, "AFSDATE"].isnull().sum()
+
+
+
+# convert the wildfires gpd to angular units crs WGS 84 (good for locating places)
+wildfires_2015 = wildfires_2015.to_crs("EPSG:4326")
+
+wildfires_2015.plot(edgecolor = "0.2", color = 'red', figsize=(10, 8))
 
 shutil.rmtree(extract_dir)
 
-# convert the wildfires gpd to angular units crs WGS 84 (good for locating places)
-wildfires_1986 = wildfires_1986.to_crs("EPSG:4326")
-
-wildfires_1986.plot(edgecolor = "0.2", color = 'red', figsize=(10, 8))
+wildfires_2015[wildfires_2015['NFIREID']==1494]['geometry'].centroid.x
 
 # ## British Columbia Province geopandas dataframe
+
+provinces = gpd.read_file("../data/provinces")  # note that I point to the shapefile "directory" containg all the individual files
+provinces = provinces.to_crs("EPSG:4326")    # I'll explain this later, I'm converting to a different coordinate reference system
+provinces
+
+province = "British Columbia"
+bc = provinces.query("PRENAME == @province").copy()
+bc
 
 # +
 import osmnx as ox
 
-bc = ox.geocode_to_gdf("British Columbia, Canada")
-bc.plot(edgecolor="0.2")
-bc = bc.to_crs("EPSG:4326")
-plt.title("British Columbia");
+# bc = ox.geocode_to_gdf("British Columbia, Canada")
+# bc.plot(edgecolor="0.2")
+# bc = bc.to_crs("EPSG:4326")
+# plt.title("British Columbia");
 # -
 
 # ### Spatial join
@@ -65,10 +77,12 @@ plt.title("British Columbia");
 # +
 # Spatial join to get the wildfires that are contained within BC only
 
-joined_data = gpd.sjoin(wildfires_1986, bc, how="inner")
+joined_data = gpd.sjoin(wildfires_2015, bc, how="inner", op='within')
 # -
 
 joined_data.plot(edgecolor="0.2")
+
+joined_data.columns
 
 joined_data['centroid'] = joined_data.geometry.centroid
 joined_data['latitude'] = joined_data.centroid.y
@@ -85,17 +99,27 @@ joined_data_measure.head(5)
 
 joined_data_measure[['POLY_HA', 'ADJ_HA', 'fire_area', 'latitude', 'longitude']] # the table values are in hectares, and the computed values are in square metres
 
+joined_data_measure['latitude'].max()
+
+joined_data_measure['longitude'].min()
+
 # ### Display the wildfires on the BC province map
 
+# +
 ax = bc.plot(edgecolor = '0.2')
 joined_data.plot(ax=ax, edgecolor="red", linewidth=0.5)
-plt.title("Wildfires in BC in 1986");
+plt.title("Wildfires in BC in 2015");
 
-    df = joined_data_measure.groupby(['YEAR', 'NFIREID', 'FIRECAUS', 'BURNCLAS', 'AGENCY'])[['POLY_HA', 'ADJ_HA', 'fire_area', 'latitude', 'longitude']].agg('sum').reset_index(drop = False)
+df = (joined_data_measure.groupby(['YEAR', 'NFIREID', 'FIRECAUS', 'BURNCLAS', 'AGENCY'])).agg({'POLY_HA':'sum',
+     'ADJ_HA': 'sum',
+     'fire_area': 'sum',
+     'latitude': 'min',
+     'longitude': 'min'}).reset_index(drop = False)
 
-shutil.rmtree(extract_dir)
 
-df.head()
+# -
+
+df[df['NFIREID']==1494]
 
 # ### Sanity check of area units
 
@@ -433,5 +457,7 @@ extract_metrics('temperature', column_names)
 extract_metrics('wind_speed', column_names)
 
 extract_metrics('precipitation', column_names)
+
+# ### SQL commands 
 
 

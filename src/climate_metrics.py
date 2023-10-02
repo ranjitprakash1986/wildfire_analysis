@@ -45,9 +45,10 @@ def get_seasonal_measures(file_path, column_names):
     df_mod = df[['year', "winter", "flag_winter", "spring", "flag_spring", "summer", "flag_summer", "autumn", "flag_autumn"]]
     
     # Create a boolean mask to identify rows with any 'M' values for the seasons
-    mask = (df_mod['flag_winter'] == 'M') | (df_mod['flag_spring'] == 'M') | (df_mod['flag_autumn'] == 'M') | (df_mod['flag_summer'] == 'M')
+    mask = (df_mod['flag_winter'] == 'M') | (df_mod['flag_spring'] == 'M') | (df_mod['flag_autumn'] == 'M') | (df_mod['flag_summer'] == 'M') | (df_mod['winter'] < -100) | (df_mod['spring'] < -100) | (df_mod['summer'] < -100) |(df_mod['autumn'] < -100)
     # Use the boolean mask to filter the DataFrame and keep only rows where the condition is False
     df_mod_filtered = df_mod[~mask]
+    
     df_mod_filtered = df_mod_filtered.drop(['flag_winter', 'flag_spring', 'flag_summer', 'flag_autumn'], axis = 1)
     
     return df_mod_filtered

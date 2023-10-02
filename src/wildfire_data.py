@@ -94,7 +94,7 @@ def yearly_wildfire_province(year, province):
     wildfires_yearfile = wildfires_yearfile.to_crs("EPSG:4326")
 
     # Spatial join to get the wildfires that are contained within BC only
-    joined_data = gpd.sjoin(wildfires_yearfile, province, how="inner")
+    joined_data = gpd.sjoin(wildfires_yearfile, province, how="inner", op='within')
     
     # get the centroid of the fires, latitude and longitude
     joined_data['centroid'] = joined_data.geometry.centroid
@@ -113,8 +113,8 @@ def yearly_wildfire_province(year, province):
     joined_data_measure['YEAR'] = joined_data_measure['YEAR'].astype(int).astype(str)
     joined_data_measure['NFIREID'] = joined_data_measure['NFIREID'].astype(int).astype(str)
     
-    # Create the dataframe
-    df = joined_data_measure.groupby(['YEAR', 'NFIREID', 'FIRECAUS', 'BURNCLAS', 'AGENCY'])[['POLY_HA', 'ADJ_HA', 'fire_area', 'latitude', 'longitude']].agg('sum').reset_index(drop = False)
+    # Create the dataframe    
+    df = joined_data_measure.groupby(['YEAR', 'NFIREID', 'FIRECAUS', 'BURNCLAS', 'AGENCY']).agg({'POLY_HA': 'sum', 'ADJ_HA': 'sum', 'fire_area':'sum', 'latitude': 'min', 'longitude': 'min'}).reset_index(drop = False)
     
     # delete the extracted directory
     shutil.rmtree(extract_dir)
@@ -123,12 +123,12 @@ def yearly_wildfire_province(year, province):
 
 
 # Specify the province
-prov_string = "British Columbia, Canada"
+prov_string = "British Columbia"
 
 # Read and convert the wildfires gpd to angular units crs WGS 84 (good for locating places)
-prov_gpd = ox.geocode_to_gdf(prov_string)
-prov_gpd = prov_gpd.to_crs("EPSG:4326")
-
+provinces = gpd.read_file("data/provinces")
+provinces = provinces.to_crs("EPSG:4326") 
+prov_gpd = provinces.query("PRENAME == @prov_string").copy()
 
 # Create an empty list to store the dataframes
 dataframes_list = []
